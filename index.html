@@ -1,0 +1,3340 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>PlanGrid — スケジュール整理ボード</title>
+  <style>
+    /* ==========================================================================
+       1. デザイントークン・背景テーマ・フォント設定
+       ========================================================================== */
+    :root {
+      /* システムフォントスタック（外部CDN不使用） */
+      --font-sans: 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'Yu Gothic UI', 'Meiryo', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      --font-serif: 'Hiragino Mincho ProN', 'Yu Mincho', 'MS PMincho', Georgia, serif;
+      --font-rounded: 'Hiragino Maru Gothic ProN', 'BIZ UDPGothic', ui-rounded, 'SFMono-Regular', Menlo, Consolas, monospace;
+      --font-mono: 'SFMono-Regular', Menlo, Consolas, 'BIZ UDGothic', monospace;
+
+      --app-font: var(--font-sans);
+      --card-font-size: 14px;
+      --card-line-height: 1.45;
+      --cell-min-height: 92px;
+
+      /* デフォルト背景：オフホワイト (#f8f9fa) */
+      --bg-page: #f8f9fa;
+      --bg-surface: #ffffff;
+      --bg-sticky: #fafbfc;
+      --bg-subtle: #f1f3f5;
+      --bg-hover: #e9ecef;
+      --bg-header: rgba(255, 255, 255, 0.94);
+
+      --text-primary: #22252a;
+      --text-secondary: #5c6370;
+      --text-muted: #8b929e;
+
+      --border-color: #e2e5e9;
+      --border-strong: #cdd2d9;
+
+      --accent: #2f6fed;
+      --accent-soft: rgba(47, 111, 237, 0.09);
+      --danger: #cf3f3f;
+      --danger-soft: rgba(207, 63, 63, 0.09);
+
+      --shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.04);
+      --shadow-md: 0 6px 20px rgba(16, 24, 40, 0.08);
+      --shadow-lg: 0 14px 36px rgba(16, 24, 40, 0.14);
+
+      /* 6色のソフトパステル・カードパレット */
+      --c-blue-bg: #eef5ff;
+      --c-blue-border: #d5e5ff;
+      --c-blue-accent: #4c8bf5;
+
+      --c-pink-bg: #fff0f4;
+      --c-pink-border: #fad6e0;
+      --c-pink-accent: #e56b8c;
+
+      --c-yellow-bg: #fff9e6;
+      --c-yellow-border: #f4e4b5;
+      --c-yellow-accent: #d99b26;
+
+      --c-green-bg: #edf9f1;
+      --c-green-border: #ccebd7;
+      --c-green-accent: #3ca364;
+
+      --c-purple-bg: #f5f0ff;
+      --c-purple-border: #e0d3fc;
+      --c-purple-accent: #8a63d2;
+
+      --c-gray-bg: #f4f5f6;
+      --c-gray-border: #e1e3e6;
+      --c-gray-accent: #8b919a;
+    }
+
+    /* 背景色バリエーション（5種類） */
+    body[data-theme="white"] {
+      --bg-page: #ffffff;
+      --bg-surface: #ffffff;
+      --bg-sticky: #fafbfc;
+      --bg-subtle: #f4f5f7;
+      --bg-hover: #eaedf0;
+      --bg-header: rgba(255, 255, 255, 0.96);
+    }
+
+    body[data-theme="offwhite"] {
+      --bg-page: #f8f9fa;
+      --bg-surface: #ffffff;
+      --bg-sticky: #fafbfc;
+      --bg-subtle: #f1f3f5;
+      --bg-hover: #e8ebef;
+      --bg-header: rgba(255, 255, 255, 0.94);
+    }
+
+    body[data-theme="beige"] {
+      --bg-page: #f7f5f0;
+      --bg-surface: #fffefb;
+      --bg-sticky: #faf8f3;
+      --bg-subtle: #efece3;
+      --bg-hover: #e6e2d7;
+      --bg-header: rgba(255, 254, 251, 0.94);
+      --border-color: #e4e0d5;
+      --border-strong: #cfc9bb;
+    }
+
+    body[data-theme="paleblue"] {
+      --bg-page: #f2f6fa;
+      --bg-surface: #ffffff;
+      --bg-sticky: #f7fafd;
+      --bg-subtle: #e8eff6;
+      --bg-hover: #dde7f1;
+      --bg-header: rgba(255, 255, 255, 0.94);
+      --border-color: #dce4ed;
+      --border-strong: #c5d1df;
+    }
+
+    body[data-theme="lightgray"] {
+      --bg-page: #eef0f2;
+      --bg-surface: #ffffff;
+      --bg-sticky: #f6f7f9;
+      --bg-subtle: #e5e8ec;
+      --bg-hover: #dadfe5;
+      --bg-header: rgba(255, 255, 255, 0.94);
+      --border-color: #dce0e5;
+      --border-strong: #c4cad2;
+    }
+
+    /* フォントファミリー切替 */
+    body[data-font="sans"] { --app-font: var(--font-sans); }
+    body[data-font="serif"] { --app-font: var(--font-serif); }
+    body[data-font="rounded"] { --app-font: var(--font-rounded); }
+
+    /* フォントサイズ切替（小 12px / 中 14px / 大 16px） */
+    body[data-size="small"] {
+      --card-font-size: 12px;
+      --card-line-height: 1.4;
+      --cell-min-height: 78px;
+    }
+    body[data-size="medium"] {
+      --card-font-size: 14px;
+      --card-line-height: 1.45;
+      --cell-min-height: 94px;
+    }
+    body[data-size="large"] {
+      --card-font-size: 16px;
+      --card-line-height: 1.5;
+      --cell-min-height: 112px;
+    }
+
+    /* ==========================================================================
+       2. ベーススタイル・リセット
+       ========================================================================== */
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      padding: 0;
+      min-height: 100%;
+      background-color: var(--bg-page);
+      color: var(--text-primary);
+      font-family: var(--app-font);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+    }
+
+    body.dragging-active {
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: grabbing !important;
+    }
+
+    button, input, textarea, select {
+      font-family: inherit;
+      color: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      border: none;
+      background: none;
+      padding: 0;
+    }
+
+    button:disabled {
+      opacity: 0.36;
+      cursor: not-allowed;
+    }
+
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    /* ==========================================================================
+       3. ヘッダー・ツールバー
+       ========================================================================== */
+    .app-header {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      background: var(--bg-header);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 10px 16px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px 12px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      flex: 1 1 200px;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 700;
+      font-size: 13.5px;
+      letter-spacing: -0.02em;
+      color: var(--text-secondary);
+      flex-shrink: 0;
+      user-select: none;
+    }
+
+    .brand-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 5px;
+      background: var(--text-primary);
+      color: var(--bg-surface);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .header-divider {
+      width: 1px;
+      height: 18px;
+      background: var(--border-strong);
+      flex-shrink: 0;
+    }
+
+    .plan-title-input {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-primary);
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 4px 8px;
+      min-width: 110px;
+      width: 100%;
+      max-width: 340px;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .plan-title-input:hover {
+      background: var(--bg-subtle);
+    }
+
+    .plan-title-input:focus {
+      outline: none;
+      background: var(--bg-surface);
+      border-color: var(--accent);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .btn-group {
+      display: inline-flex;
+      align-items: center;
+      background: var(--bg-subtle);
+      border-radius: 8px;
+      padding: 2px;
+      gap: 2px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      height: 34px;
+      padding: 0 10px;
+      border-radius: 7px;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text-primary);
+      background: transparent;
+      border: 1px solid transparent;
+      transition: background 0.15s, border-color 0.15s, color 0.15s;
+      white-space: nowrap;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: var(--bg-subtle);
+    }
+
+    .btn-outline {
+      background: var(--bg-surface);
+      border-color: var(--border-color);
+    }
+
+    .btn-outline:hover:not(:disabled) {
+      background: var(--bg-subtle);
+      border-color: var(--border-strong);
+    }
+
+    .btn-outline.is-active {
+      background: var(--bg-subtle);
+      border-color: var(--border-strong);
+      font-weight: 600;
+    }
+
+    .btn-icon-only {
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      border-radius: 6px;
+    }
+
+    .btn-icon-only:hover:not(:disabled) {
+      background: var(--bg-surface);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .btn-primary {
+      background: var(--text-primary);
+      color: #ffffff;
+      border-color: var(--text-primary);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      opacity: 0.88;
+      background: var(--text-primary);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: #ffffff;
+      border-color: var(--danger);
+    }
+
+    .btn-danger:hover:not(:disabled) {
+      opacity: 0.9;
+      background: var(--danger);
+    }
+
+    .btn-danger-ghost {
+      color: var(--danger);
+    }
+
+    .btn-danger-ghost:hover:not(:disabled) {
+      background: var(--danger-soft);
+    }
+
+    .btn svg {
+      width: 15px;
+      height: 15px;
+      flex-shrink: 0;
+    }
+
+    /* ==========================================================================
+       4. 凡例バー（色ラベル表示）
+       ========================================================================== */
+    .legend-bar-wrap {
+      padding: 10px 16px 2px;
+    }
+
+    .legend-bar {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px 14px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+
+    .legend-bar:hover {
+      border-color: var(--border-strong);
+    }
+
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12.5px;
+      color: var(--text-secondary);
+    }
+
+    .color-dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      display: inline-block;
+    }
+
+    .color-dot[data-color="blue"] { background: var(--c-blue-accent); }
+    .color-dot[data-color="pink"] { background: var(--c-pink-accent); }
+    .color-dot[data-color="yellow"] { background: var(--c-yellow-accent); }
+    .color-dot[data-color="green"] { background: var(--c-green-accent); }
+    .color-dot[data-color="purple"] { background: var(--c-purple-accent); }
+    .color-dot[data-color="gray"] { background: var(--c-gray-accent); }
+
+    .legend-hint {
+      margin-left: auto;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    /* ==========================================================================
+       5. メインレイアウト（スケジュール表 ＋ 待機エリア）
+       ========================================================================== */
+    .workspace {
+      flex: 1;
+      display: flex;
+      gap: 16px;
+      padding: 12px 16px 28px;
+      align-items: flex-start;
+      min-width: 0;
+    }
+
+    /* --- スケジュール表 --- */
+    .grid-section {
+      flex: 1;
+      min-width: 0;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+    }
+
+    .grid-scroll-wrap {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .schedule-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0;
+      table-layout: fixed;
+    }
+
+    .schedule-table th,
+    .schedule-table td {
+      border-right: 1px solid var(--border-color);
+      border-bottom: 1px solid var(--border-color);
+      vertical-align: top;
+    }
+
+    .schedule-table tr:last-child th,
+    .schedule-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .schedule-table tr > *:last-child {
+      border-right: none;
+    }
+
+    /* 左端の時間帯列（横スクロール時に固定） */
+    .col-corner,
+    .row-header-cell {
+      position: sticky;
+      left: 0;
+      z-index: 5;
+      width: 108px;
+      min-width: 96px;
+      background: var(--bg-sticky);
+      border-right: 1px solid var(--border-strong) !important;
+    }
+
+    .col-corner {
+      z-index: 8;
+      padding: 10px 8px;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-muted);
+      vertical-align: middle !important;
+    }
+
+    /* 列見出し（日付） */
+    .col-header-cell {
+      background: var(--bg-sticky);
+      min-width: 170px;
+      padding: 8px;
+    }
+
+    .header-edit-wrap {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .axis-input {
+      width: 100%;
+      min-width: 0;
+      background: transparent;
+      border: 1px solid transparent;
+      border-radius: 5px;
+      padding: 4px 6px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-align: center;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .row-header-cell .axis-input {
+      text-align: left;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .axis-input:hover {
+      background: var(--bg-subtle);
+    }
+
+    .axis-input:focus {
+      outline: none;
+      background: var(--bg-surface);
+      border-color: var(--accent);
+      color: var(--text-primary);
+    }
+
+    .axis-del-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      opacity: 0.45;
+      transition: opacity 0.15s, background 0.15s, color 0.15s;
+    }
+
+    .axis-del-btn:hover:not(:disabled) {
+      opacity: 1;
+      background: var(--danger-soft);
+      color: var(--danger);
+    }
+
+    /* 列追加セル */
+    .add-col-th {
+      width: 54px;
+      min-width: 54px;
+      background: var(--bg-sticky);
+      padding: 6px;
+      text-align: center;
+      vertical-align: middle !important;
+    }
+
+    .add-axis-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      padding: 5px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      transition: background 0.15s, color 0.15s;
+    }
+
+    .add-axis-btn:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+    }
+
+    .add-col-spacer {
+      background: var(--bg-subtle);
+      opacity: 0.3;
+    }
+
+    /* 行見出しセル */
+    .row-header-cell {
+      padding: 10px 6px 10px 8px;
+    }
+
+    /* 行追加フッター */
+    .add-row-footer {
+      border-top: 1px solid var(--border-color);
+      padding: 6px 10px;
+      background: var(--bg-sticky);
+      display: flex;
+      align-items: center;
+    }
+
+    /* スケジュールセル */
+    .grid-cell {
+      position: relative;
+      padding: 8px;
+      min-height: var(--cell-min-height);
+      background: var(--bg-surface);
+      transition: background 0.12s;
+    }
+
+    .grid-cell.drop-active {
+      background: var(--accent-soft);
+      box-shadow: inset 0 0 0 1.5px var(--accent);
+    }
+
+    .cell-inner {
+      display: flex;
+      flex-direction: column;
+      min-height: calc(var(--cell-min-height) - 16px);
+      position: relative;
+    }
+
+    .cell-add-btn {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 24px;
+      height: 24px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      background: var(--bg-surface);
+      opacity: 0.45;
+      z-index: 2;
+      transition: opacity 0.15s, background 0.15s, color 0.15s;
+    }
+
+    .grid-cell:hover .cell-add-btn,
+    .cell-add-btn:focus {
+      opacity: 1;
+    }
+
+    .cell-add-btn:hover {
+      background: var(--bg-subtle);
+      color: var(--text-primary);
+    }
+
+    .card-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      padding-top: 2px;
+      padding-right: 18px;
+    }
+
+    .pool-section .card-list {
+      padding-right: 0;
+      min-height: 112px;
+    }
+
+    /* --- 待機エリア（候補ストック） --- */
+    .pool-section {
+      width: 304px;
+      flex-shrink: 0;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: var(--shadow-sm);
+      display: flex;
+      flex-direction: column;
+      transition: width 0.2s ease, border-color 0.15s;
+      overflow: hidden;
+    }
+
+    .pool-section.drop-active {
+      background: var(--accent-soft);
+      border-color: var(--accent);
+    }
+
+    .pool-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 11px 12px;
+      background: var(--bg-sticky);
+      border-bottom: 1px solid var(--border-color);
+      gap: 8px;
+    }
+
+    .pool-title-group {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .pool-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .pool-count {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: var(--bg-subtle);
+      border: 1px solid var(--border-color);
+      border-radius: 999px;
+      padding: 1px 7px;
+    }
+
+    .pool-body {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    /* クイック追加フォーム */
+    .quick-add {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .quick-add-row {
+      display: flex;
+      gap: 6px;
+    }
+
+    .quick-input {
+      flex: 1;
+      min-width: 0;
+      height: 36px;
+      padding: 0 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-page);
+      font-size: 13px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .quick-input:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: var(--bg-surface);
+    }
+
+    .quick-colors {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .quick-color-btn {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid transparent;
+      transition: transform 0.12s, border-color 0.12s;
+    }
+
+    .quick-color-btn:hover {
+      transform: scale(1.1);
+    }
+
+    .quick-color-btn.selected {
+      border-color: var(--text-primary);
+      transform: scale(1.12);
+    }
+
+    .quick-color-btn .color-dot {
+      width: 14px;
+      height: 14px;
+    }
+
+    .quick-color-label {
+      margin-left: auto;
+      font-size: 11.5px;
+      color: var(--text-muted);
+    }
+
+    .pool-empty {
+      text-align: center;
+      padding: 24px 12px;
+      font-size: 12.5px;
+      color: var(--text-muted);
+      border: 1px dashed var(--border-color);
+      border-radius: 8px;
+      line-height: 1.55;
+    }
+
+    /* PC折りたたみ状態（右端にスリム収納） */
+    .pool-section.collapsed {
+      width: 44px;
+    }
+
+    .pool-section.collapsed .pool-header {
+      flex-direction: column;
+      padding: 12px 6px;
+      border-bottom: none;
+      gap: 10px;
+    }
+
+    .pool-section.collapsed .pool-title-group {
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .pool-section.collapsed .pool-title {
+      writing-mode: vertical-rl;
+      text-orientation: upright;
+      letter-spacing: 0.12em;
+    }
+
+    .pool-section.collapsed .pool-body {
+      display: none;
+    }
+
+    /* ==========================================================================
+       6. カードデザイン & ドラッグ要素
+       ========================================================================== */
+    .card {
+      position: relative;
+      display: flex;
+      align-items: stretch;
+      border-radius: 7px;
+      border: 1px solid var(--c-gray-border);
+      border-left: 3.5px solid var(--c-gray-accent);
+      background: var(--c-gray-bg);
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow 0.15s, opacity 0.15s;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      box-shadow: 0 2px 6px rgba(16, 24, 40, 0.08);
+    }
+
+    .card[data-color="blue"] {
+      background: var(--c-blue-bg);
+      border-color: var(--c-blue-border);
+      border-left-color: var(--c-blue-accent);
+    }
+    .card[data-color="pink"] {
+      background: var(--c-pink-bg);
+      border-color: var(--c-pink-border);
+      border-left-color: var(--c-pink-accent);
+    }
+    .card[data-color="yellow"] {
+      background: var(--c-yellow-bg);
+      border-color: var(--c-yellow-border);
+      border-left-color: var(--c-yellow-accent);
+    }
+    .card[data-color="green"] {
+      background: var(--c-green-bg);
+      border-color: var(--c-green-border);
+      border-left-color: var(--c-green-accent);
+    }
+    .card[data-color="purple"] {
+      background: var(--c-purple-bg);
+      border-color: var(--c-purple-border);
+      border-left-color: var(--c-purple-accent);
+    }
+    .card[data-color="gray"] {
+      background: var(--c-gray-bg);
+      border-color: var(--c-gray-border);
+      border-left-color: var(--c-gray-accent);
+    }
+
+    /* つまみのみ touch-action: none を適用し、通常スクロールを妨げない */
+    .drag-handle {
+      width: 26px;
+      min-width: 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      -webkit-user-select: none;
+      opacity: 0.65;
+      transition: opacity 0.15s, background 0.15s;
+    }
+
+    .drag-handle:hover {
+      opacity: 1;
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .drag-handle:active {
+      cursor: grabbing;
+    }
+
+    .card-content {
+      flex: 1;
+      min-width: 0;
+      padding: 7px 9px 7px 2px;
+      cursor: pointer;
+    }
+
+    /* 表上では最大2行＋三点リーダーでスッキリ収める */
+    .card-text {
+      font-size: var(--card-font-size);
+      line-height: var(--card-line-height);
+      color: var(--text-primary);
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      word-break: break-word;
+      white-space: pre-wrap;
+    }
+
+    .card.is-dragging {
+      opacity: 0.28;
+    }
+
+    /* ドラッグ中のフローティングゴースト */
+    .drag-ghost {
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 9999;
+      pointer-events: none;
+      box-shadow: var(--shadow-lg);
+      opacity: 0.95;
+      transform-origin: center center;
+      will-change: transform;
+    }
+
+    /* 挿入位置インジケーター */
+    .drop-indicator {
+      height: 3px;
+      border-radius: 999px;
+      background: var(--accent);
+      margin: -1px 0;
+      pointer-events: none;
+      position: relative;
+    }
+
+    .drop-indicator::before {
+      content: '';
+      position: absolute;
+      left: -3px;
+      top: -2.5px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    /* ==========================================================================
+       7. スクショ表示モード
+       ========================================================================== */
+    .screenshot-exit-btn {
+      display: none;
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 100;
+      background: var(--text-primary);
+      color: #ffffff;
+      padding: 9px 15px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 600;
+      box-shadow: var(--shadow-md);
+      align-items: center;
+      gap: 6px;
+      opacity: 0.88;
+      transition: opacity 0.15s, transform 0.15s;
+    }
+
+    .screenshot-exit-btn:hover {
+      opacity: 1;
+      transform: translateY(-1px);
+    }
+
+    body.screenshot-mode .app-header {
+      padding: 14px 16px 4px;
+      border-bottom: none;
+      background: transparent;
+      backdrop-filter: none;
+      position: static;
+    }
+
+    body.screenshot-mode .brand,
+    body.screenshot-mode .header-divider,
+    body.screenshot-mode .header-actions,
+    body.screenshot-mode .legend-hint,
+    body.screenshot-mode .pool-section,
+    body.screenshot-mode .cell-add-btn,
+    body.screenshot-mode .axis-del-btn,
+    body.screenshot-mode .add-col-th,
+    body.screenshot-mode .add-col-spacer,
+    body.screenshot-mode .add-row-footer,
+    body.screenshot-mode .drag-handle {
+      display: none !important;
+    }
+
+    body.screenshot-mode .plan-title-input {
+      font-size: 20px;
+      padding: 0;
+      pointer-events: none;
+    }
+
+    body.screenshot-mode .axis-input {
+      pointer-events: none;
+    }
+
+    body.screenshot-mode .card-list {
+      padding-right: 0;
+    }
+
+    body.screenshot-mode .card-content {
+      padding: 7px 10px;
+      pointer-events: none;
+    }
+
+    body.screenshot-mode .legend-bar {
+      pointer-events: none;
+      border-color: transparent;
+      background: transparent;
+      padding: 4px 2px;
+    }
+
+    body.screenshot-mode .legend-bar-wrap {
+      padding: 0 16px 4px;
+    }
+
+    body.screenshot-mode .workspace {
+      padding-top: 6px;
+    }
+
+    body.screenshot-mode .screenshot-exit-btn {
+      display: inline-flex;
+    }
+
+    /* ==========================================================================
+       8. モーダル & トースト通知
+       ========================================================================== */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(15, 20, 30, 0.42);
+      backdrop-filter: blur(2px);
+      -webkit-backdrop-filter: blur(2px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+
+    .modal-backdrop.open {
+      display: flex;
+    }
+
+    .modal {
+      width: 100%;
+      max-width: 480px;
+      max-height: 90vh;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      animation: modalIn 0.16s ease-out;
+    }
+
+    @keyframes modalIn {
+      from { opacity: 0; transform: translateY(8px) scale(0.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .modal-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .modal-title {
+      font-size: 15px;
+      font-weight: 700;
+      margin: 0;
+    }
+
+    .modal-body {
+      padding: 16px 18px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .modal-footer {
+      padding: 12px 18px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      background: var(--bg-sticky);
+      flex-wrap: wrap;
+    }
+
+    .modal-footer-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .input, .textarea, .select {
+      width: 100%;
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      background: var(--bg-page);
+      padding: 9px 11px;
+      font-size: 14px;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .textarea {
+      min-height: 112px;
+      resize: vertical;
+      line-height: 1.5;
+    }
+
+    .textarea.code {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      min-height: 160px;
+    }
+
+    .input:focus, .textarea:focus, .select:focus {
+      outline: none;
+      border-color: var(--accent);
+      background: var(--bg-surface);
+    }
+
+    /* カード編集モーダルの色選択 */
+    .color-picker-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 7px;
+    }
+
+    .color-option {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      border: 1.5px solid var(--border-color);
+      background: var(--bg-page);
+      font-size: 12.5px;
+      text-align: left;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .color-option span:last-child {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .color-option.selected {
+      border-color: var(--text-primary);
+      background: var(--bg-surface);
+      font-weight: 600;
+    }
+
+    .move-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .order-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* 設定モーダル用ボタングループ */
+    .segment-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .segment-btn {
+      flex: 1 1 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 7px 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-page);
+      font-size: 12.5px;
+      font-weight: 500;
+      transition: all 0.15s;
+    }
+
+    .segment-btn.active {
+      background: var(--text-primary);
+      color: #ffffff;
+      border-color: var(--text-primary);
+    }
+
+    .swatch-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid rgba(0, 0, 0, 0.18);
+      flex-shrink: 0;
+    }
+
+    .label-edit-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .label-edit-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--bg-page);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 4px 8px;
+    }
+
+    .label-edit-item input {
+      border: none;
+      background: transparent;
+      width: 100%;
+      font-size: 13px;
+      padding: 4px 0;
+    }
+
+    .label-edit-item input:focus {
+      outline: none;
+    }
+
+    /* エクスポート選択カード */
+    .export-option-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-page);
+      text-align: left;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .export-option-card:hover {
+      border-color: var(--border-strong);
+      background: var(--bg-subtle);
+    }
+
+    .export-option-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .export-option-desc {
+      font-size: 12px;
+      color: var(--text-secondary);
+      line-height: 1.45;
+    }
+
+    .error-banner {
+      display: none;
+      padding: 9px 12px;
+      border-radius: 8px;
+      background: var(--danger-soft);
+      color: var(--danger);
+      font-size: 12.5px;
+      line-height: 1.45;
+    }
+
+    .error-banner.show {
+      display: block;
+    }
+
+    /* リセット選択オプション */
+    .reset-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* トースト通知 */
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 24px;
+      transform: translate(-50%, 16px);
+      z-index: 400;
+      background: var(--text-primary);
+      color: #ffffff;
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: var(--shadow-md);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      max-width: calc(100vw - 32px);
+      text-align: center;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translate(-50%, 0);
+    }
+
+    /* ==========================================================================
+       9. レスポンシブ対応（タブレット・スマホ）
+       ========================================================================== */
+    @media (max-width: 899px) {
+      .workspace {
+        flex-direction: column;
+        padding: 10px 12px 24px;
+        gap: 14px;
+      }
+
+      .grid-section,
+      .pool-section {
+        width: 100%;
+      }
+
+      /* モバイルでは待機エリアを縦方向アコーディオンとして開閉 */
+      .pool-section.collapsed {
+        width: 100%;
+      }
+
+      .pool-section.collapsed .pool-header {
+        flex-direction: row;
+        padding: 11px 12px;
+      }
+
+      .pool-section.collapsed .pool-title-group {
+        flex-direction: row;
+      }
+
+      .pool-section.collapsed .pool-title {
+        writing-mode: horizontal-tb;
+        letter-spacing: normal;
+      }
+
+      .col-corner,
+      .row-header-cell {
+        width: 88px;
+        min-width: 88px;
+      }
+
+      .col-header-cell {
+        min-width: 152px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .app-header {
+        padding: 8px 12px;
+        gap: 8px;
+      }
+
+      .legend-bar-wrap {
+        padding: 8px 12px 2px;
+      }
+
+      .legend-hint {
+        display: none;
+      }
+
+      .btn {
+        height: 32px;
+        padding: 0 8px;
+        font-size: 12px;
+      }
+
+      .btn .hide-xs {
+        display: none;
+      }
+
+      .color-picker-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .label-edit-list {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body data-theme="offwhite" data-font="sans" data-size="medium">
+  <div class="app-shell">
+    <!-- ==================== 上部ヘッダー・ツールバー ==================== -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="brand" aria-label="PlanGrid">
+          <span class="brand-icon" aria-hidden="true">
+            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="2" y="2" width="5" height="5" rx="1"></rect>
+              <rect x="9" y="2" width="5" height="5" rx="1"></rect>
+              <rect x="2" y="9" width="5" height="5" rx="1"></rect>
+              <rect x="9" y="9" width="5" height="5" rx="1"></rect>
+            </svg>
+          </span>
+          <span>PlanGrid</span>
+        </div>
+        <span class="header-divider" aria-hidden="true"></span>
+        <input id="plan-title-input" class="plan-title-input" type="text" value="3連休プラン" aria-label="ボードタイトル" placeholder="タイトルを入力">
+      </div>
+
+      <div class="header-actions">
+        <!-- Undo / Redo -->
+        <div class="btn-group" role="group" aria-label="履歴操作">
+          <button id="btn-undo" class="btn btn-icon-only" title="元に戻す (Ctrl+Z)" aria-label="元に戻す">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M9 14L4 9l5-5"></path>
+              <path d="M20 20v-7a4 4 0 0 0-4-4H4"></path>
+            </svg>
+          </button>
+          <button id="btn-redo" class="btn btn-icon-only" title="やり直す (Ctrl+Y)" aria-label="やり直す">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 14l5-5-5-5"></path>
+              <path d="M4 20v-7a4 4 0 0 1 4-4h12"></path>
+            </svg>
+          </button>
+        </div>
+
+        <!-- 待機エリア表示切替 -->
+        <button id="btn-toolbar-pool" class="btn btn-outline is-active" title="待機エリアを開閉">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
+            <line x1="15" y1="3" x2="15" y2="21"></line>
+          </svg>
+          <span class="hide-xs">待機エリア</span>
+        </button>
+
+        <!-- スクショ表示 -->
+        <button id="btn-screenshot" class="btn btn-outline" title="スクショ用にすっきり表示">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+            <circle cx="12" cy="13" r="4"></circle>
+          </svg>
+          <span>スクショ表示</span>
+        </button>
+
+        <!-- エクスポート -->
+        <button id="btn-export" class="btn btn-outline" title="MarkdownまたはJSONをコピー">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <span>エクスポート</span>
+        </button>
+
+        <!-- JSON読込 -->
+        <button id="btn-import" class="btn btn-outline" title="JSONから復元">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>読込</span>
+        </button>
+
+        <!-- 設定 -->
+        <button id="btn-settings" class="btn btn-outline" title="フォント・背景色・ラベル設定">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9c.26.6.85 1 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span class="hide-xs">設定</span>
+        </button>
+
+        <!-- リセット -->
+        <button id="btn-reset" class="btn btn-danger-ghost" title="カード消去・初期化">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+            <path d="M10 11v6"></path>
+            <path d="M14 11v6"></path>
+            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path>
+          </svg>
+          <span class="hide-xs">リセット</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- ==================== 凡例バー ==================== -->
+    <div class="legend-bar-wrap">
+      <div id="legend-bar" class="legend-bar" role="button" tabindex="0" title="クリックして色のラベル名を編集">
+        <!-- JSで描画 -->
+      </div>
+    </div>
+
+    <!-- ==================== メイン2ペイン ==================== -->
+    <main class="workspace">
+      <!-- スケジュール表 -->
+      <section class="grid-section" aria-label="スケジュール表">
+        <div id="grid-scroll-wrap" class="grid-scroll-wrap">
+          <table id="schedule-table" class="schedule-table">
+            <!-- JSで描画 -->
+          </table>
+        </div>
+        <div class="add-row-footer">
+          <button id="btn-add-row" class="add-axis-btn">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+            <span>行を追加</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- 待機エリア（候補ストック） -->
+      <aside id="pool-section" class="pool-section dropzone" data-pool="true" aria-label="待機エリア・候補ストック">
+        <div class="pool-header">
+          <div class="pool-title-group">
+            <span class="pool-title">待機エリア / 候補ストック</span>
+            <span id="pool-count" class="pool-count">0</span>
+          </div>
+          <button id="btn-toggle-pool" class="btn btn-icon-only" title="待機エリアを開閉" aria-label="待機エリアを開閉">
+            <svg id="pool-toggle-icon" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+
+        <div class="pool-body">
+          <form id="quick-add-form" class="quick-add">
+            <div class="quick-add-row">
+              <input id="quick-add-input" class="quick-input" type="text" placeholder="行きたいお店・スポットを追加..." autocomplete="off">
+              <button type="submit" class="btn btn-primary" style="height: 36px; padding: 0 12px;">追加</button>
+            </div>
+            <div id="quick-colors" class="quick-colors">
+              <!-- JSで色選択ドットを描画 -->
+            </div>
+          </form>
+
+          <div id="pool-card-list" class="card-list" data-pool="true">
+            <!-- JSで待機カードを描画 -->
+          </div>
+        </div>
+      </aside>
+    </main>
+  </div>
+
+  <!-- スクショ表示解除ボタン -->
+  <button id="btn-exit-screenshot" class="screenshot-exit-btn">
+    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"></line>
+      <line x1="6" y1="6" x2="18" y2="18"></line>
+    </svg>
+    <span>編集に戻る</span>
+  </button>
+
+  <!-- ==================== カード作成・編集モーダル ==================== -->
+  <div id="modal-card" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-card-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-card-title" class="modal-title">カードを編集</h2>
+        <button class="btn btn-icon-only modal-close-btn" data-close="modal-card" aria-label="閉じる">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="field">
+          <label class="field-label" for="card-edit-text">内容（表では2行まで省略・エクスポート時は全文出力）</label>
+          <textarea id="card-edit-text" class="textarea" placeholder="例：〇〇美術館&#10;10:00開館・駐車場あり"></textarea>
+        </div>
+
+        <div class="field">
+          <span class="field-label">色（カテゴリ）</span>
+          <div id="card-color-picker" class="color-picker-grid">
+            <!-- JSで生成 -->
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field-label">配置先（スマホ片手移動にも対応）</span>
+          <div class="move-grid">
+            <select id="card-move-col" class="select" aria-label="配置先の日付または待機エリア"></select>
+            <select id="card-move-row" class="select" aria-label="配置先の時間帯"></select>
+          </div>
+        </div>
+
+        <div id="card-order-field" class="field">
+          <span class="field-label">同じ枠内での並び順</span>
+          <div class="order-controls">
+            <button type="button" id="btn-card-move-up" class="btn btn-outline" style="flex:1;">↑ 上へ</button>
+            <button type="button" id="btn-card-move-down" class="btn btn-outline" style="flex:1;">↓ 下へ</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div id="card-edit-subactions" style="display:flex; gap:6px;">
+          <button type="button" id="btn-card-duplicate" class="btn btn-outline">複製</button>
+          <button type="button" id="btn-card-delete" class="btn btn-danger-ghost">削除</button>
+        </div>
+        <div class="modal-footer-right">
+          <button type="button" class="btn btn-outline modal-close-btn" data-close="modal-card">キャンセル</button>
+          <button type="button" id="btn-card-save" class="btn btn-primary">保存</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== エクスポートモーダル ==================== -->
+  <div id="modal-export" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-export-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-export-title" class="modal-title">エクスポート（クリップボードにコピー）</h2>
+        <button class="btn btn-icon-only modal-close-btn" data-close="modal-export" aria-label="閉じる">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <button type="button" id="btn-copy-markdown" class="export-option-card">
+          <div>
+            <div class="export-option-title">Markdownでコピー (AI相談用)</div>
+            <div class="export-option-desc">色ラベル・詳細メモ全文・待機中の候補まで整理してコピーします。</div>
+          </div>
+          <span class="btn btn-primary" style="pointer-events:none;">コピー</span>
+        </button>
+
+        <button type="button" id="btn-copy-json" class="export-option-card">
+          <div>
+            <div class="export-option-title">JSONでコピー (バックアップ用)</div>
+            <div class="export-option-desc">現在のボード全データをJSON形式でコピーします。「読込」から復元可能です。</div>
+          </div>
+          <span class="btn btn-outline" style="pointer-events:none;">コピー</span>
+        </button>
+
+        <div class="field">
+          <label class="field-label" for="export-preview-text">コピー内容プレビュー</label>
+          <textarea id="export-preview-text" class="textarea code" readonly placeholder="上のボタンを押すとコピーされ、ここに内容が表示されます"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div class="modal-footer-right">
+          <button type="button" class="btn btn-outline modal-close-btn" data-close="modal-export">閉じる</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== JSON読込モーダル ==================== -->
+  <div id="modal-import" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-import-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-import-title" class="modal-title">JSONから読み込む</h2>
+        <button class="btn btn-icon-only modal-close-btn" data-close="modal-import" aria-label="閉じる">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="field">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+            <label class="field-label" for="import-json-input">保存したJSONを貼り付け</label>
+            <button type="button" id="btn-paste-clipboard" class="btn btn-outline" style="height:28px; font-size:11.5px;">クリップボードから貼り付け</button>
+          </div>
+          <textarea id="import-json-input" class="textarea code" placeholder='{"version": 1, "title": "...", ...}'></textarea>
+        </div>
+        <div id="import-error" class="error-banner"></div>
+      </div>
+
+      <div class="modal-footer">
+        <div class="modal-footer-right">
+          <button type="button" class="btn btn-outline modal-close-btn" data-close="modal-import">キャンセル</button>
+          <button type="button" id="btn-import-apply" class="btn btn-primary">読み込む</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== 設定モーダル ==================== -->
+  <div id="modal-settings" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-settings-title">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-settings-title" class="modal-title">表示・色ラベル設定</h2>
+        <button class="btn btn-icon-only modal-close-btn" data-close="modal-settings" aria-label="閉じる">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-body">
+        <div class="field">
+          <span class="field-label">全体のフォント</span>
+          <div id="setting-font-group" class="segment-group">
+            <button type="button" class="segment-btn" data-font="sans">ゴシック</button>
+            <button type="button" class="segment-btn" data-font="serif">明朝</button>
+            <button type="button" class="segment-btn" data-font="rounded">丸ゴシック・等幅系</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field-label">全体の文字サイズ</span>
+          <div id="setting-size-group" class="segment-group">
+            <button type="button" class="segment-btn" data-size="small">小 (12px)</button>
+            <button type="button" class="segment-btn" data-size="medium">中 (14px)</button>
+            <button type="button" class="segment-btn" data-size="large">大 (16px)</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field-label">背景色</span>
+          <div id="setting-theme-group" class="segment-group">
+            <button type="button" class="segment-btn" data-theme="white">
+              <span class="swatch-dot" style="background:#ffffff;"></span>ピュアホワイト
+            </button>
+            <button type="button" class="segment-btn" data-theme="offwhite">
+              <span class="swatch-dot" style="background:#f8f9fa;"></span>オフホワイト
+            </button>
+            <button type="button" class="segment-btn" data-theme="beige">
+              <span class="swatch-dot" style="background:#f7f5f0;"></span>ウォームベージュ
+            </button>
+            <button type="button" class="segment-btn" data-theme="paleblue">
+              <span class="swatch-dot" style="background:#f2f6fa;"></span>ペールブルー
+            </button>
+            <button type="button" class="segment-btn" data-theme="lightgray">
+              <span class="swatch-dot" style="background:#eef0f2;"></span>ライトグレー
+            </button>
+          </div>
+        </div>
+
+        <div class="field">
+          <span class="field-label">色ごとのラベル名（凡例・Markdown出力に自動反映）</span>
+          <div id="setting-color-labels" class="label-edit-list">
+            <!-- JSで生成 -->
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <div class="modal-footer-right">
+          <button type="button" class="btn btn-primary modal-close-btn" data-close="modal-settings">完了</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== リセット確認モーダル ==================== -->
+  <div id="modal-reset" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modal-reset-title">
+    <div class="modal" style="max-width: 420px;">
+      <div class="modal-header">
+        <h2 id="modal-reset-title" class="modal-title">リセット方法を選択</h2>
+        <button class="btn btn-icon-only modal-close-btn" data-close="modal-reset" aria-label="閉じる">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p style="margin:0; font-size:13px; color:var(--text-secondary); line-height:1.6;">
+          どちらを実行しても、直後であれば「元に戻す（Undo）」で復元できます。
+        </p>
+        <div class="reset-actions">
+          <button type="button" id="btn-reset-cards-only" class="export-option-card">
+            <div>
+              <div class="export-option-title">カードを全消去</div>
+              <div class="export-option-desc">日付・時間帯・色ラベルは残し、配置済み＆待機カードだけをすべて消します。</div>
+            </div>
+          </button>
+          <button type="button" id="btn-reset-full" class="export-option-card" style="border-color: rgba(207, 63, 63, 0.35);">
+            <div>
+              <div class="export-option-title" style="color:var(--danger);">初期テンプレートに戻す</div>
+              <div class="export-option-desc">カードをすべて消し、日付（3日）と時間帯（5枠）を初期状態に戻します。</div>
+            </div>
+          </button>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <div class="modal-footer-right">
+          <button type="button" class="btn btn-outline modal-close-btn" data-close="modal-reset">キャンセル</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- トースト通知 -->
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      'use strict';
+
+      /* ========================================================================
+         1. 定数・デフォルトデータ
+         ======================================================================== */
+      const STORAGE_KEY = 'plangrid_state_v1';
+      const MAX_HISTORY = 50;
+      const COLOR_KEYS = ['blue', 'pink', 'yellow', 'green', 'purple', 'gray'];
+
+      const DEFAULT_COLOR_LABELS = {
+        blue: '自分',
+        pink: '妻',
+        yellow: 'ごはん',
+        green: '予約済',
+        purple: 'その他',
+        gray: 'メモ'
+      };
+
+      const DEFAULT_SETTINGS = {
+        fontFamily: 'sans',
+        fontSize: 'medium',
+        bgTheme: 'offwhite'
+      };
+
+      const VALID_FONTS = ['sans', 'serif', 'rounded'];
+      const VALID_SIZES = ['small', 'medium', 'large'];
+      const VALID_THEMES = ['white', 'offwhite', 'beige', 'paleblue', 'lightgray'];
+
+      /** 一意のID生成 */
+      function uid(prefix = 'id') {
+        return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 7)}`;
+      }
+
+      /** 状態のディープコピー */
+      function cloneState(obj) {
+        return JSON.parse(JSON.stringify(obj));
+      }
+
+      /** 空の初期テンプレート状態を生成 */
+      function createDefaultBoardState(keepSettings, keepColorLabels) {
+        return {
+          version: 1,
+          title: '3連休プラン',
+          cols: [
+            { id: 'c1', label: '11/21(土)' },
+            { id: 'c2', label: '11/22(日)' },
+            { id: 'c3', label: '11/23(月)' }
+          ],
+          rows: [
+            { id: 'r1', label: '午前' },
+            { id: 'r2', label: '昼ごはん' },
+            { id: 'r3', label: '午後' },
+            { id: 'r4', label: '夕ご飯' },
+            { id: 'r5', label: '夜' }
+          ],
+          cards: [],
+          colorLabels: keepColorLabels ? cloneState(keepColorLabels) : cloneState(DEFAULT_COLOR_LABELS),
+          settings: keepSettings ? cloneState(keepSettings) : cloneState(DEFAULT_SETTINGS)
+        };
+      }
+
+      /** 初回アクセス時のみ表示するサンプルデータ（4件） */
+      function createSampleState() {
+        const base = createDefaultBoardState();
+        base.cards = [
+          {
+            id: uid('card'),
+            text: '県立美術館の企画展\n10:00開館・オンライン前売券あり',
+            color: 'pink',
+            colId: 'c1',
+            rowId: 'r1'
+          },
+          {
+            id: uid('card'),
+            text: 'イタリアン △△（18:30予約済・駐車場3台）',
+            color: 'green',
+            colId: 'c2',
+            rowId: 'r4'
+          },
+          {
+            id: uid('card'),
+            text: '駅前うどん 〇〇\n11:30前に着くと並ばず入れる・日曜定休',
+            color: 'yellow',
+            colId: null,
+            rowId: null
+          },
+          {
+            id: uid('card'),
+            text: '海沿いドライブ＆展望台カフェ',
+            color: 'blue',
+            colId: null,
+            rowId: null
+          }
+        ];
+        return base;
+      }
+
+      /* ========================================================================
+         2. アプリケーション状態・履歴（Undo / Redo）・永続化
+         ======================================================================== */
+      let state = null;
+      let historyStack = [];
+      let historyIndex = -1;
+      let quickAddColor = 'blue';
+      let poolCollapsed = false;
+
+      // カードモーダル編集用コンテキスト
+      let modalCardContext = {
+        mode: 'edit', // 'create' | 'edit'
+        cardId: null,
+        colId: null,
+        rowId: null,
+        color: 'blue'
+      };
+
+      /** 読み込みJSONの検証と安全な正規化 */
+      function validateAndNormalizeState(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+          throw new Error('JSONの形式が正しくありません（オブジェクト形式が必要です）。');
+        }
+        if (!Array.isArray(raw.cols) || raw.cols.length === 0) {
+          throw new Error('日付列（cols）が1件以上必要です。');
+        }
+        if (!Array.isArray(raw.rows) || raw.rows.length === 0) {
+          throw new Error('時間帯行（rows）が1件以上必要です。');
+        }
+        if (!Array.isArray(raw.cards)) {
+          throw new Error('カード一覧（cards）が配列ではありません。');
+        }
+
+        const cols = raw.cols.map((c, i) => ({
+          id: typeof c?.id === 'string' && c.id ? c.id : uid(`c${i}`),
+          label: typeof c?.label === 'string' && c.label.trim() ? c.label : `列${i + 1}`
+        }));
+        const rows = raw.rows.map((r, i) => ({
+          id: typeof r?.id === 'string' && r.id ? r.id : uid(`r${i}`),
+          label: typeof r?.label === 'string' && r.label.trim() ? r.label : `行${i + 1}`
+        }));
+
+        const colIdSet = new Set(cols.map(c => c.id));
+        const rowIdSet = new Set(rows.map(r => r.id));
+
+        const cards = raw.cards
+          .filter(card => card && typeof card === 'object')
+          .map(card => {
+            const validCell = colIdSet.has(card.colId) && rowIdSet.has(card.rowId);
+            return {
+              id: typeof card.id === 'string' && card.id ? card.id : uid('card'),
+              text: typeof card.text === 'string' ? card.text : '',
+              color: COLOR_KEYS.includes(card.color) ? card.color : 'gray',
+              colId: validCell ? card.colId : null,
+              rowId: validCell ? card.rowId : null
+            };
+          });
+
+        const colorLabels = { ...DEFAULT_COLOR_LABELS };
+        if (raw.colorLabels && typeof raw.colorLabels === 'object') {
+          COLOR_KEYS.forEach(k => {
+            if (typeof raw.colorLabels[k] === 'string' && raw.colorLabels[k].trim() !== '') {
+              colorLabels[k] = raw.colorLabels[k].trim();
+            }
+          });
+        }
+
+        const settings = { ...DEFAULT_SETTINGS };
+        if (raw.settings && typeof raw.settings === 'object') {
+          if (VALID_FONTS.includes(raw.settings.fontFamily)) {
+            settings.fontFamily = raw.settings.fontFamily;
+          }
+          if (VALID_SIZES.includes(raw.settings.fontSize)) {
+            settings.fontSize = raw.settings.fontSize;
+          }
+          if (VALID_THEMES.includes(raw.settings.bgTheme)) {
+            settings.bgTheme = raw.settings.bgTheme;
+          }
+        }
+
+        return {
+          version: 1,
+          title: typeof raw.title === 'string' && raw.title.trim() ? raw.title : '3連休プラン',
+          cols,
+          rows,
+          cards,
+          colorLabels,
+          settings
+        };
+      }
+
+      /** 初回ロード（localStorageが空ならサンプルを表示） */
+      function loadInitialState() {
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          if (saved) {
+            return validateAndNormalizeState(JSON.parse(saved));
+          }
+        } catch (err) {
+          console.warn('localStorageの復元に失敗したため初期サンプルを使用します:', err);
+        }
+        return createSampleState();
+      }
+
+      /** localStorageへ自動保存 */
+      function persistState() {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (err) {
+          console.warn('localStorageへの保存に失敗しました:', err);
+        }
+      }
+
+      /** 状態更新を履歴に積んで保存・再描画 */
+      function commitState(nextState) {
+        const snapshot = JSON.stringify(nextState);
+        if (historyIndex >= 0 && historyStack[historyIndex] === snapshot) {
+          return;
+        }
+        historyStack = historyStack.slice(0, historyIndex + 1);
+        historyStack.push(snapshot);
+        if (historyStack.length > MAX_HISTORY) {
+          historyStack.shift();
+        }
+        historyIndex = historyStack.length - 1;
+        state = cloneState(nextState);
+        persistState();
+        renderAll();
+      }
+
+      function undo() {
+        if (historyIndex <= 0) return;
+        historyIndex -= 1;
+        state = JSON.parse(historyStack[historyIndex]);
+        persistState();
+        renderAll();
+        showToast('元に戻しました');
+      }
+
+      function redo() {
+        if (historyIndex >= historyStack.length - 1) return;
+        historyIndex += 1;
+        state = JSON.parse(historyStack[historyIndex]);
+        persistState();
+        renderAll();
+        showToast('やり直しました');
+      }
+
+      /* ========================================================================
+         3. コンテナ・カード操作ヘルパー
+         ======================================================================== */
+      /** 指定セル（または待機エリア: null, null）内のカード一覧を取得 */
+      function getContainerCards(targetState, colId, rowId) {
+        return targetState.cards.filter(c => c.colId === colId && c.rowId === rowId);
+      }
+
+      /** カードを指定コンテナの指定インデックスへ移動・並び替え */
+      function moveCardTo(cardId, targetColId, targetRowId, targetIndex) {
+        const next = cloneState(state);
+        const cardIdx = next.cards.findIndex(c => c.id === cardId);
+        if (cardIdx === -1) return false;
+
+        const currentCard = next.cards[cardIdx];
+        const prevSiblings = getContainerCards(next, currentCard.colId, currentCard.rowId);
+        const prevPosInContainer = prevSiblings.findIndex(c => c.id === cardId);
+
+        if (
+          currentCard.colId === targetColId &&
+          currentCard.rowId === targetRowId &&
+          prevPosInContainer === targetIndex
+        ) {
+          return false;
+        }
+
+        const [moved] = next.cards.splice(cardIdx, 1);
+        moved.colId = targetColId;
+        moved.rowId = targetRowId;
+
+        const destSiblings = getContainerCards(next, targetColId, targetRowId);
+        if (destSiblings.length === 0 || targetIndex >= destSiblings.length) {
+          next.cards.push(moved);
+        } else {
+          const clampedIndex = Math.max(0, targetIndex);
+          const anchorCard = destSiblings[clampedIndex];
+          const globalInsertIndex = next.cards.findIndex(c => c.id === anchorCard.id);
+          next.cards.splice(globalInsertIndex, 0, moved);
+        }
+
+        commitState(next);
+        return true;
+      }
+
+      /* ========================================================================
+         4. DOM参照・画面描画
+         ======================================================================== */
+      const els = {
+        titleInput: document.getElementById('plan-title-input'),
+        btnUndo: document.getElementById('btn-undo'),
+        btnRedo: document.getElementById('btn-redo'),
+        btnToolbarPool: document.getElementById('btn-toolbar-pool'),
+        btnScreenshot: document.getElementById('btn-screenshot'),
+        btnExitScreenshot: document.getElementById('btn-exit-screenshot'),
+        btnExport: document.getElementById('btn-export'),
+        btnImport: document.getElementById('btn-import'),
+        btnSettings: document.getElementById('btn-settings'),
+        btnReset: document.getElementById('btn-reset'),
+        legendBar: document.getElementById('legend-bar'),
+        scheduleTable: document.getElementById('schedule-table'),
+        gridScrollWrap: document.getElementById('grid-scroll-wrap'),
+        btnAddRow: document.getElementById('btn-add-row'),
+        poolSection: document.getElementById('pool-section'),
+        poolCount: document.getElementById('pool-count'),
+        poolCardList: document.getElementById('pool-card-list'),
+        btnTogglePool: document.getElementById('btn-toggle-pool'),
+        poolToggleIcon: document.getElementById('pool-toggle-icon'),
+        quickAddForm: document.getElementById('quick-add-form'),
+        quickAddInput: document.getElementById('quick-add-input'),
+        quickColors: document.getElementById('quick-colors'),
+        toast: document.getElementById('toast')
+      };
+
+      function applySettingsToBody() {
+        document.body.dataset.theme = state.settings.bgTheme;
+        document.body.dataset.font = state.settings.fontFamily;
+        document.body.dataset.size = state.settings.fontSize;
+      }
+
+      function renderHeader() {
+        if (document.activeElement !== els.titleInput) {
+          els.titleInput.value = state.title;
+        }
+        els.btnUndo.disabled = historyIndex <= 0;
+        els.btnRedo.disabled = historyIndex >= historyStack.length - 1;
+        els.btnToolbarPool.classList.toggle('is-active', !poolCollapsed);
+      }
+
+      function renderLegend() {
+        els.legendBar.innerHTML = '';
+        COLOR_KEYS.forEach(color => {
+          const item = document.createElement('span');
+          item.className = 'legend-item';
+          const dot = document.createElement('span');
+          dot.className = 'color-dot';
+          dot.dataset.color = color;
+          const label = document.createElement('span');
+          label.textContent = state.colorLabels[color];
+          item.append(dot, label);
+          els.legendBar.appendChild(item);
+        });
+        const hint = document.createElement('span');
+        hint.className = 'legend-hint';
+        hint.textContent = 'クリックしてラベル編集';
+        els.legendBar.appendChild(hint);
+      }
+
+      /** 個別カードのDOM要素を作成 */
+      function createCardElement(card) {
+        const el = document.createElement('div');
+        el.className = 'card';
+        el.dataset.cardId = card.id;
+        el.dataset.color = card.color;
+
+        const handle = document.createElement('div');
+        handle.className = 'drag-handle';
+        handle.title = 'ドラッグして移動';
+        handle.setAttribute('aria-label', 'ドラッグして移動');
+        handle.innerHTML = `
+          <svg viewBox="0 0 12 20" width="10" height="16" fill="currentColor" aria-hidden="true">
+            <circle cx="3.5" cy="4" r="1.4"></circle>
+            <circle cx="8.5" cy="4" r="1.4"></circle>
+            <circle cx="3.5" cy="10" r="1.4"></circle>
+            <circle cx="8.5" cy="10" r="1.4"></circle>
+            <circle cx="3.5" cy="16" r="1.4"></circle>
+            <circle cx="8.5" cy="16" r="1.4"></circle>
+          </svg>
+        `;
+        handle.addEventListener('pointerdown', (e) => startCardDrag(e, card, el));
+
+        const content = document.createElement('div');
+        content.className = 'card-content';
+        content.addEventListener('click', () => openCardModal('edit', card.id));
+
+        const textEl = document.createElement('div');
+        textEl.className = 'card-text';
+        textEl.textContent = card.text;
+
+        content.appendChild(textEl);
+        el.append(handle, content);
+        return el;
+      }
+
+      /** スケジュール表（グリッド）の描画 */
+      function renderGrid() {
+        const table = els.scheduleTable;
+        table.innerHTML = '';
+
+        // THEAD（日付列見出し）
+        const thead = document.createElement('thead');
+        const headRow = document.createElement('tr');
+
+        const corner = document.createElement('th');
+        corner.className = 'col-corner';
+        corner.textContent = '時間帯';
+        headRow.appendChild(corner);
+
+        state.cols.forEach((col, colIndex) => {
+          const th = document.createElement('th');
+          th.className = 'col-header-cell';
+
+          const wrap = document.createElement('div');
+          wrap.className = 'header-edit-wrap';
+
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.className = 'axis-input';
+          input.value = col.label;
+          input.setAttribute('aria-label', `列${colIndex + 1}の見出し`);
+          bindInlineAxisEdit(input, col.label, (newVal) => {
+            const next = cloneState(state);
+            const target = next.cols.find(c => c.id === col.id);
+            if (target && target.label !== newVal) {
+              target.label = newVal;
+              commitState(next);
+            }
+          });
+
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.className = 'axis-del-btn';
+          delBtn.title = 'この列を削除（カードは待機エリアへ移動）';
+          delBtn.setAttribute('aria-label', `${col.label}を削除`);
+          delBtn.disabled = state.cols.length <= 1;
+          delBtn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+          delBtn.addEventListener('click', () => deleteColumn(col.id));
+
+          wrap.append(input, delBtn);
+          th.appendChild(wrap);
+          headRow.appendChild(th);
+        });
+
+        // 「+ 列」追加ボタン
+        const addColTh = document.createElement('th');
+        addColTh.className = 'add-col-th';
+        const addColBtn = document.createElement('button');
+        addColBtn.type = 'button';
+        addColBtn.className = 'add-axis-btn';
+        addColBtn.title = '日付列を追加';
+        addColBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg><span>列</span>`;
+        addColBtn.addEventListener('click', addColumn);
+        addColTh.appendChild(addColBtn);
+        headRow.appendChild(addColTh);
+
+        thead.appendChild(headRow);
+        table.appendChild(thead);
+
+        // TBODY（時間帯行と各セル）
+        const tbody = document.createElement('tbody');
+        state.rows.forEach((row, rowIndex) => {
+          const tr = document.createElement('tr');
+
+          const rowTh = document.createElement('th');
+          rowTh.className = 'row-header-cell';
+
+          const wrap = document.createElement('div');
+          wrap.className = 'header-edit-wrap';
+
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.className = 'axis-input';
+          input.value = row.label;
+          input.setAttribute('aria-label', `行${rowIndex + 1}の見出し`);
+          bindInlineAxisEdit(input, row.label, (newVal) => {
+            const next = cloneState(state);
+            const target = next.rows.find(r => r.id === row.id);
+            if (target && target.label !== newVal) {
+              target.label = newVal;
+              commitState(next);
+            }
+          });
+
+          const delBtn = document.createElement('button');
+          delBtn.type = 'button';
+          delBtn.className = 'axis-del-btn';
+          delBtn.title = 'この行を削除（カードは待機エリアへ移動）';
+          delBtn.setAttribute('aria-label', `${row.label}を削除`);
+          delBtn.disabled = state.rows.length <= 1;
+          delBtn.innerHTML = `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`;
+          delBtn.addEventListener('click', () => deleteRow(row.id));
+
+          wrap.append(input, delBtn);
+          rowTh.appendChild(wrap);
+          tr.appendChild(rowTh);
+
+          // 各日付×時間帯セル
+          state.cols.forEach(col => {
+            const td = document.createElement('td');
+            td.className = 'grid-cell dropzone';
+            td.dataset.colId = col.id;
+            td.dataset.rowId = row.id;
+
+            const inner = document.createElement('div');
+            inner.className = 'cell-inner';
+
+            const addBtn = document.createElement('button');
+            addBtn.type = 'button';
+            addBtn.className = 'cell-add-btn';
+            addBtn.title = `${col.label} ${row.label} にカードを追加`;
+            addBtn.setAttribute('aria-label', `${col.label} ${row.label} にカードを追加`);
+            addBtn.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`;
+            addBtn.addEventListener('click', () => openCardModal('create', null, col.id, row.id));
+
+            const list = document.createElement('div');
+            list.className = 'card-list';
+            list.dataset.colId = col.id;
+            list.dataset.rowId = row.id;
+
+            const cellCards = getContainerCards(state, col.id, row.id);
+            cellCards.forEach(card => list.appendChild(createCardElement(card)));
+
+            inner.append(addBtn, list);
+            td.appendChild(inner);
+            tr.appendChild(td);
+          });
+
+          const spacerTd = document.createElement('td');
+          spacerTd.className = 'add-col-spacer';
+          tr.appendChild(spacerTd);
+
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+      }
+
+      /** インライン見出し編集（Enter確定 / Esc取消 / blur確定） */
+      function bindInlineAxisEdit(input, originalValue, onCommit) {
+        let canceled = false;
+        input.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            input.blur();
+          } else if (e.key === 'Escape') {
+            canceled = true;
+            input.value = originalValue;
+            input.blur();
+          }
+        });
+        input.addEventListener('blur', () => {
+          if (canceled) {
+            canceled = false;
+            return;
+          }
+          const trimmed = input.value.trim();
+          if (!trimmed) {
+            input.value = originalValue;
+            return;
+          }
+          onCommit(trimmed);
+        });
+      }
+
+      /** 待機エリア（候補ストック）を描画 */
+      function renderPool() {
+        const poolCards = getContainerCards(state, null, null);
+        els.poolCount.textContent = String(poolCards.length);
+
+        // クイック追加の色選択ドット
+        els.quickColors.innerHTML = '';
+        COLOR_KEYS.forEach(color => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'quick-color-btn' + (quickAddColor === color ? ' selected' : '');
+          btn.title = state.colorLabels[color];
+          btn.setAttribute('aria-label', state.colorLabels[color]);
+          btn.innerHTML = `<span class="color-dot" data-color="${color}"></span>`;
+          btn.addEventListener('click', () => {
+            quickAddColor = color;
+            renderPool();
+          });
+          els.quickColors.appendChild(btn);
+        });
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'quick-color-label';
+        labelSpan.textContent = state.colorLabels[quickAddColor];
+        els.quickColors.appendChild(labelSpan);
+
+        // 待機カード一覧
+        els.poolCardList.innerHTML = '';
+        if (poolCards.length === 0) {
+          const empty = document.createElement('div');
+          empty.className = 'pool-empty';
+          empty.textContent = '行きたいお店や候補を登録して、スケジュール表へドラッグできます';
+          els.poolCardList.appendChild(empty);
+        } else {
+          poolCards.forEach(card => els.poolCardList.appendChild(createCardElement(card)));
+        }
+
+        els.poolSection.classList.toggle('collapsed', poolCollapsed);
+        els.btnToolbarPool.classList.toggle('is-active', !poolCollapsed);
+        updatePoolToggleIcon();
+      }
+
+      function updatePoolToggleIcon() {
+        const isNarrow = window.innerWidth < 900;
+        if (isNarrow) {
+          els.poolToggleIcon.innerHTML = poolCollapsed
+            ? '<polyline points="6 9 12 15 18 9"></polyline>'
+            : '<polyline points="18 15 12 9 6 15"></polyline>';
+        } else {
+          els.poolToggleIcon.innerHTML = poolCollapsed
+            ? '<polyline points="15 18 9 12 15 6"></polyline>'
+            : '<polyline points="9 18 15 12 9 6"></polyline>';
+        }
+      }
+
+      function renderAll() {
+        applySettingsToBody();
+        renderHeader();
+        renderLegend();
+        renderGrid();
+        renderPool();
+      }
+
+      /* ========================================================================
+         5. 列・行の追加と削除（削除時はカードを待機エリアへ安全に退避）
+         ======================================================================== */
+      function addColumn() {
+        const next = cloneState(state);
+        next.cols.push({ id: uid('c'), label: `${next.cols.length + 1}日目` });
+        commitState(next);
+        requestAnimationFrame(() => {
+          els.gridScrollWrap.scrollLeft = els.gridScrollWrap.scrollWidth;
+        });
+      }
+
+      function deleteColumn(colId) {
+        if (state.cols.length <= 1) return;
+        const next = cloneState(state);
+        const col = next.cols.find(c => c.id === colId);
+        next.cols = next.cols.filter(c => c.id !== colId);
+        let movedCount = 0;
+        next.cards.forEach(card => {
+          if (card.colId === colId) {
+            card.colId = null;
+            card.rowId = null;
+            movedCount++;
+          }
+        });
+        commitState(next);
+        showToast(movedCount > 0
+          ? `「${col?.label || '列'}」を削除しました（${movedCount}件のカードは待機エリアへ移動）`
+          : `「${col?.label || '列'}」を削除しました`);
+      }
+
+      function addRow() {
+        const next = cloneState(state);
+        next.rows.push({ id: uid('r'), label: `枠${next.rows.length + 1}` });
+        commitState(next);
+      }
+
+      function deleteRow(rowId) {
+        if (state.rows.length <= 1) return;
+        const next = cloneState(state);
+        const row = next.rows.find(r => r.id === rowId);
+        next.rows = next.rows.filter(r => r.id !== rowId);
+        let movedCount = 0;
+        next.cards.forEach(card => {
+          if (card.rowId === rowId) {
+            card.colId = null;
+            card.rowId = null;
+            movedCount++;
+          }
+        });
+        commitState(next);
+        showToast(movedCount > 0
+          ? `「${row?.label || '行'}」を削除しました（${movedCount}件のカードは待機エリアへ移動）`
+          : `「${row?.label || '行'}」を削除しました`);
+      }
+
+      /* ========================================================================
+         6. Pointer Events によるドラッグ＆ドロップ（PC・タブレット・スマホ両対応）
+         ======================================================================== */
+      let dragState = null;
+
+      function startCardDrag(e, card, sourceEl) {
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const rect = sourceEl.getBoundingClientRect();
+        const ghost = sourceEl.cloneNode(true);
+        ghost.classList.add('drag-ghost');
+        ghost.style.width = `${Math.min(Math.max(rect.width, 150), 260)}px`;
+        ghost.style.transform = `translate3d(${rect.left}px, ${rect.top}px, 0) scale(1.02)`;
+        document.body.appendChild(ghost);
+
+        const indicator = document.createElement('div');
+        indicator.className = 'drop-indicator';
+
+        sourceEl.classList.add('is-dragging');
+        document.body.classList.add('dragging-active');
+
+        dragState = {
+          pointerId: e.pointerId,
+          cardId: card.id,
+          sourceEl,
+          ghost,
+          indicator,
+          offsetX: e.clientX - rect.left,
+          offsetY: e.clientY - rect.top,
+          activeDropzone: null,
+          targetColId: card.colId,
+          targetRowId: card.rowId,
+          targetIndex: 0,
+          hasValidTarget: false,
+          autoScrollTimer: null,
+          lastClientX: e.clientX,
+          lastClientY: e.clientY
+        };
+
+        window.addEventListener('pointermove', onDragMove, { passive: false });
+        window.addEventListener('pointerup', onDragEnd);
+        window.addEventListener('pointercancel', onDragCancel);
+
+        dragState.autoScrollTimer = setInterval(handleDragAutoScroll, 20);
+        updateDropTarget(e.clientX, e.clientY);
+      }
+
+      function onDragMove(e) {
+        if (!dragState || e.pointerId !== dragState.pointerId) return;
+        e.preventDefault();
+
+        dragState.lastClientX = e.clientX;
+        dragState.lastClientY = e.clientY;
+
+        const x = e.clientX - dragState.offsetX;
+        const y = e.clientY - dragState.offsetY;
+        dragState.ghost.style.transform = `translate3d(${x}px, ${y}px, 0) scale(1.02)`;
+
+        updateDropTarget(e.clientX, e.clientY);
+      }
+
+      /** 画面端・表の左右端でドラッグ中に自動スクロール */
+      function handleDragAutoScroll() {
+        if (!dragState) return;
+        const margin = 56;
+        const speed = 10;
+        const cy = dragState.lastClientY;
+        const cx = dragState.lastClientX;
+
+        if (cy < margin) {
+          window.scrollBy(0, -speed);
+        } else if (cy > window.innerHeight - margin) {
+          window.scrollBy(0, speed);
+        }
+
+        const wrapRect = els.gridScrollWrap.getBoundingClientRect();
+        if (cy >= wrapRect.top && cy <= wrapRect.bottom) {
+          if (cx < wrapRect.left + margin) {
+            els.gridScrollWrap.scrollLeft -= speed;
+          } else if (cx > wrapRect.right - margin) {
+            els.gridScrollWrap.scrollLeft += speed;
+          }
+        }
+      }
+
+      /** ポインタ座標からドロップ先コンテナと挿入位置を計算 */
+      function updateDropTarget(clientX, clientY) {
+        const elements = document.elementsFromPoint(clientX, clientY);
+        const dropzone = elements.find(el => el.classList && el.classList.contains('dropzone'));
+
+        if (dragState.activeDropzone && dragState.activeDropzone !== dropzone) {
+          dragState.activeDropzone.classList.remove('drop-active');
+        }
+
+        if (!dropzone) {
+          dragState.activeDropzone = null;
+          dragState.hasValidTarget = false;
+          if (dragState.indicator.parentNode) {
+            dragState.indicator.remove();
+          }
+          return;
+        }
+
+        // 折りたたまれている待機エリアに重ねたら自動で開く
+        if (dropzone.dataset.pool === 'true' && poolCollapsed) {
+          poolCollapsed = false;
+          renderPool();
+        }
+
+        dragState.activeDropzone = dropzone;
+        dropzone.classList.add('drop-active');
+
+        const isPool = dropzone.dataset.pool === 'true';
+        const targetColId = isPool ? null : dropzone.dataset.colId;
+        const targetRowId = isPool ? null : dropzone.dataset.rowId;
+        const listEl = dropzone.querySelector('.card-list');
+        if (!listEl) return;
+
+        const siblings = Array.from(listEl.children).filter(
+          child => child.classList.contains('card') && !child.classList.contains('is-dragging')
+        );
+
+        let insertIdx = siblings.length;
+        for (let i = 0; i < siblings.length; i++) {
+          const r = siblings[i].getBoundingClientRect();
+          const midY = r.top + r.height / 2;
+          if (clientY < midY) {
+            insertIdx = i;
+            break;
+          }
+        }
+
+        if (insertIdx < siblings.length) {
+          listEl.insertBefore(dragState.indicator, siblings[insertIdx]);
+        } else {
+          listEl.appendChild(dragState.indicator);
+        }
+
+        dragState.targetColId = targetColId;
+        dragState.targetRowId = targetRowId;
+        dragState.targetIndex = insertIdx;
+        dragState.hasValidTarget = true;
+      }
+
+      function cleanupDrag() {
+        if (!dragState) return;
+        clearInterval(dragState.autoScrollTimer);
+        window.removeEventListener('pointermove', onDragMove);
+        window.removeEventListener('pointerup', onDragEnd);
+        window.removeEventListener('pointercancel', onDragCancel);
+
+        dragState.sourceEl.classList.remove('is-dragging');
+        if (dragState.activeDropzone) {
+          dragState.activeDropzone.classList.remove('drop-active');
+        }
+        if (dragState.ghost.parentNode) dragState.ghost.remove();
+        if (dragState.indicator.parentNode) dragState.indicator.remove();
+        document.body.classList.remove('dragging-active');
+        dragState = null;
+      }
+
+      function onDragEnd(e) {
+        if (!dragState || e.pointerId !== dragState.pointerId) return;
+        const { cardId, hasValidTarget, targetColId, targetRowId, targetIndex } = dragState;
+        cleanupDrag();
+        if (hasValidTarget) {
+          moveCardTo(cardId, targetColId, targetRowId, targetIndex);
+        }
+      }
+
+      function onDragCancel() {
+        cleanupDrag();
+      }
+
+      /* ========================================================================
+         7. モーダル制御（カード編集 / エクスポート / インポート / 設定 / リセット）
+         ======================================================================== */
+      function openModal(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('open');
+      }
+
+      function closeModal(id) {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('open');
+      }
+
+      function closeAllModals() {
+        document.querySelectorAll('.modal-backdrop.open').forEach(m => m.classList.remove('open'));
+      }
+
+      document.querySelectorAll('.modal-close-btn').forEach(btn => {
+        btn.addEventListener('click', () => closeModal(btn.dataset.close));
+      });
+      document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+        backdrop.addEventListener('click', (e) => {
+          if (e.target === backdrop) backdrop.classList.remove('open');
+        });
+      });
+
+      /* --- カード作成・編集モーダル --- */
+      const cardModalEls = {
+        title: document.getElementById('modal-card-title'),
+        text: document.getElementById('card-edit-text'),
+        colorPicker: document.getElementById('card-color-picker'),
+        moveCol: document.getElementById('card-move-col'),
+        moveRow: document.getElementById('card-move-row'),
+        orderField: document.getElementById('card-order-field'),
+        btnUp: document.getElementById('btn-card-move-up'),
+        btnDown: document.getElementById('btn-card-move-down'),
+        subActions: document.getElementById('card-edit-subactions'),
+        btnDup: document.getElementById('btn-card-duplicate'),
+        btnDel: document.getElementById('btn-card-delete'),
+        btnSave: document.getElementById('btn-card-save')
+      };
+
+      function openCardModal(mode, cardId = null, colId = null, rowId = null) {
+        const isEdit = mode === 'edit';
+        let card = null;
+        if (isEdit) {
+          card = state.cards.find(c => c.id === cardId);
+          if (!card) return;
+        }
+
+        modalCardContext = {
+          mode,
+          cardId: isEdit ? card.id : null,
+          colId: isEdit ? card.colId : colId,
+          rowId: isEdit ? card.rowId : rowId,
+          color: isEdit ? card.color : quickAddColor
+        };
+
+        cardModalEls.title.textContent = isEdit ? 'カードを編集' : 'カードを追加';
+        cardModalEls.text.value = isEdit ? card.text : '';
+        cardModalEls.subActions.style.display = isEdit ? 'flex' : 'none';
+        cardModalEls.orderField.style.display = isEdit ? 'flex' : 'none';
+
+        renderCardColorPicker();
+        populateMoveSelects(modalCardContext.colId, modalCardContext.rowId);
+        updateOrderButtonsState();
+
+        openModal('modal-card');
+        setTimeout(() => cardModalEls.text.focus(), 40);
+      }
+
+      function renderCardColorPicker() {
+        cardModalEls.colorPicker.innerHTML = '';
+        COLOR_KEYS.forEach(color => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'color-option' + (modalCardContext.color === color ? ' selected' : '');
+          btn.innerHTML = `<span class="color-dot" data-color="${color}"></span><span></span>`;
+          btn.querySelector('span:last-child').textContent = state.colorLabels[color];
+          btn.addEventListener('click', () => {
+            modalCardContext.color = color;
+            renderCardColorPicker();
+          });
+          cardModalEls.colorPicker.appendChild(btn);
+        });
+      }
+
+      function populateMoveSelects(selectedColId, selectedRowId) {
+        cardModalEls.moveCol.innerHTML = '';
+        const poolOpt = document.createElement('option');
+        poolOpt.value = '__POOL__';
+        poolOpt.textContent = '待機エリア';
+        cardModalEls.moveCol.appendChild(poolOpt);
+
+        state.cols.forEach(col => {
+          const opt = document.createElement('option');
+          opt.value = col.id;
+          opt.textContent = col.label;
+          cardModalEls.moveCol.appendChild(opt);
+        });
+
+        cardModalEls.moveRow.innerHTML = '';
+        state.rows.forEach(row => {
+          const opt = document.createElement('option');
+          opt.value = row.id;
+          opt.textContent = row.label;
+          cardModalEls.moveRow.appendChild(opt);
+        });
+
+        if (selectedColId && selectedRowId) {
+          cardModalEls.moveCol.value = selectedColId;
+          cardModalEls.moveRow.value = selectedRowId;
+          cardModalEls.moveRow.disabled = false;
+        } else {
+          cardModalEls.moveCol.value = '__POOL__';
+          cardModalEls.moveRow.value = state.rows[0]?.id || '';
+          cardModalEls.moveRow.disabled = true;
+        }
+      }
+
+      cardModalEls.moveCol.addEventListener('change', () => {
+        const isPool = cardModalEls.moveCol.value === '__POOL__';
+        cardModalEls.moveRow.disabled = isPool;
+        if (!isPool && !cardModalEls.moveRow.value && state.rows[0]) {
+          cardModalEls.moveRow.value = state.rows[0].id;
+        }
+        updateOrderButtonsState();
+      });
+
+      cardModalEls.moveRow.addEventListener('change', updateOrderButtonsState);
+
+      function updateOrderButtonsState() {
+        if (modalCardContext.mode !== 'edit') return;
+        const card = state.cards.find(c => c.id === modalCardContext.cardId);
+        if (!card) return;
+
+        // 配置先プルダウンが元のセルと異なる場合は、保存後の並びになるため一時無効化
+        const isPool = cardModalEls.moveCol.value === '__POOL__';
+        const selCol = isPool ? null : cardModalEls.moveCol.value;
+        const selRow = isPool ? null : cardModalEls.moveRow.value;
+        if (selCol !== card.colId || selRow !== card.rowId) {
+          cardModalEls.btnUp.disabled = true;
+          cardModalEls.btnDown.disabled = true;
+          return;
+        }
+
+        const siblings = getContainerCards(state, card.colId, card.rowId);
+        const idx = siblings.findIndex(c => c.id === card.id);
+        cardModalEls.btnUp.disabled = idx <= 0;
+        cardModalEls.btnDown.disabled = idx === -1 || idx >= siblings.length - 1;
+      }
+
+      cardModalEls.btnUp.addEventListener('click', () => {
+        const card = state.cards.find(c => c.id === modalCardContext.cardId);
+        if (!card) return;
+        const siblings = getContainerCards(state, card.colId, card.rowId);
+        const idx = siblings.findIndex(c => c.id === card.id);
+        if (idx > 0) {
+          moveCardTo(card.id, card.colId, card.rowId, idx - 1);
+          updateOrderButtonsState();
+        }
+      });
+
+      cardModalEls.btnDown.addEventListener('click', () => {
+        const card = state.cards.find(c => c.id === modalCardContext.cardId);
+        if (!card) return;
+        const siblings = getContainerCards(state, card.colId, card.rowId);
+        const idx = siblings.findIndex(c => c.id === card.id);
+        if (idx >= 0 && idx < siblings.length - 1) {
+          moveCardTo(card.id, card.colId, card.rowId, idx + 1);
+          updateOrderButtonsState();
+        }
+      });
+
+      function saveCardModal() {
+        const text = cardModalEls.text.value.trim();
+        if (!text) {
+          showToast('カードの内容を入力してください');
+          cardModalEls.text.focus();
+          return;
+        }
+
+        const isPool = cardModalEls.moveCol.value === '__POOL__';
+        const targetColId = isPool ? null : cardModalEls.moveCol.value;
+        const targetRowId = isPool ? null : cardModalEls.moveRow.value;
+
+        const next = cloneState(state);
+        if (modalCardContext.mode === 'create') {
+          next.cards.push({
+            id: uid('card'),
+            text,
+            color: modalCardContext.color,
+            colId: targetColId,
+            rowId: targetRowId
+          });
+          commitState(next);
+          closeModal('modal-card');
+          showToast('カードを追加しました');
+        } else {
+          const idx = next.cards.findIndex(c => c.id === modalCardContext.cardId);
+          if (idx === -1) return;
+          const card = next.cards[idx];
+          const movedContainer = card.colId !== targetColId || card.rowId !== targetRowId;
+          card.text = text;
+          card.color = modalCardContext.color;
+          card.colId = targetColId;
+          card.rowId = targetRowId;
+
+          if (movedContainer) {
+            next.cards.splice(idx, 1);
+            next.cards.push(card);
+          }
+          commitState(next);
+          closeModal('modal-card');
+        }
+      }
+
+      cardModalEls.btnSave.addEventListener('click', saveCardModal);
+      cardModalEls.text.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+          e.preventDefault();
+          saveCardModal();
+        }
+      });
+
+      cardModalEls.btnDup.addEventListener('click', () => {
+        const text = cardModalEls.text.value.trim();
+        if (!text) return;
+        const next = cloneState(state);
+        const origIdx = next.cards.findIndex(c => c.id === modalCardContext.cardId);
+        if (origIdx === -1) return;
+        const orig = next.cards[origIdx];
+        const copy = {
+          id: uid('card'),
+          text,
+          color: modalCardContext.color,
+          colId: orig.colId,
+          rowId: orig.rowId
+        };
+        next.cards.splice(origIdx + 1, 0, copy);
+        commitState(next);
+        closeModal('modal-card');
+        showToast('カードを複製しました');
+      });
+
+      cardModalEls.btnDel.addEventListener('click', () => {
+        const next = cloneState(state);
+        next.cards = next.cards.filter(c => c.id !== modalCardContext.cardId);
+        commitState(next);
+        closeModal('modal-card');
+        showToast('カードを削除しました（元に戻せます）');
+      });
+
+      /* --- エクスポート（Markdown / JSON クリップボードコピー） --- */
+      const exportPreviewEl = document.getElementById('export-preview-text');
+
+      function formatCardForMarkdown(card) {
+        const label = state.colorLabels[card.color] || 'メモ';
+        const singleLine = card.text
+          .trim()
+          .split(/\r?\n+/)
+          .map(s => s.trim())
+          .filter(Boolean)
+          .join(' ');
+        return `[${label}] ${singleLine}`;
+      }
+
+      function generateMarkdown() {
+        const lines = [];
+        lines.push(`# ${state.title}`);
+        lines.push('');
+
+        state.cols.forEach(col => {
+          lines.push(`## ${col.label}`);
+          state.rows.forEach(row => {
+            const cellCards = getContainerCards(state, col.id, row.id);
+            if (cellCards.length > 0) {
+              const joined = cellCards.map(formatCardForMarkdown).join(' / ');
+              lines.push(`- **${row.label}**: ${joined}`);
+            } else {
+              lines.push(`- **${row.label}**: (空き)`);
+            }
+          });
+          lines.push('');
+        });
+
+        lines.push('## 待機中の候補（未配置）');
+        const poolCards = getContainerCards(state, null, null);
+        if (poolCards.length === 0) {
+          lines.push('- (なし)');
+        } else {
+          poolCards.forEach(card => {
+            lines.push(`- ${formatCardForMarkdown(card)}`);
+          });
+        }
+
+        return lines.join('\n');
+      }
+
+      function generateJson() {
+        return JSON.stringify(state, null, 2);
+      }
+
+      /** クリップボードコピー（execCommandフォールバック付きでiframe環境でも動作） */
+      async function copyTextToClipboard(text) {
+        if (navigator.clipboard && window.isSecureContext) {
+          try {
+            await navigator.clipboard.writeText(text);
+            return true;
+          } catch (_) {
+            // iframe制約や権限拒否時はフォールバック実行
+          }
+        }
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.setAttribute('readonly', '');
+          ta.style.position = 'fixed';
+          ta.style.top = '0';
+          ta.style.left = '0';
+          ta.style.opacity = '0';
+          ta.style.pointerEvents = 'none';
+          document.body.appendChild(ta);
+          ta.focus();
+          ta.select();
+          ta.setSelectionRange(0, text.length);
+          const ok = document.execCommand('copy');
+          document.body.removeChild(ta);
+          return ok;
+        } catch (_) {
+          return false;
+        }
+      }
+
+      els.btnExport.addEventListener('click', () => {
+        exportPreviewEl.value = generateMarkdown();
+        openModal('modal-export');
+      });
+
+      document.getElementById('btn-copy-markdown').addEventListener('click', async () => {
+        const md = generateMarkdown();
+        exportPreviewEl.value = md;
+        const ok = await copyTextToClipboard(md);
+        showToast(ok ? 'Markdownをコピーしました' : 'プレビュー欄から手動でコピーしてください');
+      });
+
+      document.getElementById('btn-copy-json').addEventListener('click', async () => {
+        const json = generateJson();
+        exportPreviewEl.value = json;
+        const ok = await copyTextToClipboard(json);
+        showToast(ok ? 'JSONをコピーしました' : 'プレビュー欄から手動でコピーしてください');
+      });
+
+      /* --- JSONインポート --- */
+      const importInput = document.getElementById('import-json-input');
+      const importError = document.getElementById('import-error');
+
+      els.btnImport.addEventListener('click', () => {
+        importInput.value = '';
+        importError.textContent = '';
+        importError.classList.remove('show');
+        openModal('modal-import');
+        setTimeout(() => importInput.focus(), 40);
+      });
+
+      document.getElementById('btn-paste-clipboard').addEventListener('click', async () => {
+        try {
+          if (navigator.clipboard && navigator.clipboard.readText) {
+            const text = await navigator.clipboard.readText();
+            if (text) {
+              importInput.value = text;
+              importError.classList.remove('show');
+              showToast('クリップボードから貼り付けました');
+              return;
+            }
+          }
+          showToast('入力欄を長押し、または Ctrl+V / Cmd+V で貼り付けてください');
+          importInput.focus();
+        } catch (_) {
+          showToast('入力欄を長押し、または Ctrl+V / Cmd+V で貼り付けてください');
+          importInput.focus();
+        }
+      });
+
+      document.getElementById('btn-import-apply').addEventListener('click', () => {
+        const rawText = importInput.value.trim();
+        if (!rawText) {
+          importError.textContent = 'JSONテキストを貼り付けてください。';
+          importError.classList.add('show');
+          return;
+        }
+        try {
+          const parsed = JSON.parse(rawText);
+          const normalized = validateAndNormalizeState(parsed);
+          commitState(normalized);
+          closeModal('modal-import');
+          showToast('JSONから復元しました');
+        } catch (err) {
+          importError.textContent = `読み込みエラー：${err.message || 'JSONの書式を確認してください。'}`;
+          importError.classList.add('show');
+        }
+      });
+
+      /* --- 設定モーダル --- */
+      const settingFontBtns = document.querySelectorAll('#setting-font-group .segment-btn');
+      const settingSizeBtns = document.querySelectorAll('#setting-size-group .segment-btn');
+      const settingThemeBtns = document.querySelectorAll('#setting-theme-group .segment-btn');
+      const settingColorLabelsWrap = document.getElementById('setting-color-labels');
+
+      function openSettingsModal(focusLabels = false) {
+        renderSettingsModalUI();
+        openModal('modal-settings');
+        if (focusLabels) {
+          const firstInput = settingColorLabelsWrap.querySelector('input');
+          if (firstInput) setTimeout(() => firstInput.focus(), 50);
+        }
+      }
+
+      function renderSettingsModalUI() {
+        settingFontBtns.forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.font === state.settings.fontFamily);
+        });
+        settingSizeBtns.forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.size === state.settings.fontSize);
+        });
+        settingThemeBtns.forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.theme === state.settings.bgTheme);
+        });
+
+        settingColorLabelsWrap.innerHTML = '';
+        COLOR_KEYS.forEach(color => {
+          const item = document.createElement('div');
+          item.className = 'label-edit-item';
+          const dot = document.createElement('span');
+          dot.className = 'color-dot';
+          dot.dataset.color = color;
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = state.colorLabels[color];
+          input.placeholder = DEFAULT_COLOR_LABELS[color];
+          input.setAttribute('aria-label', `${DEFAULT_COLOR_LABELS[color]}のラベル名`);
+          input.addEventListener('change', () => {
+            const val = input.value.trim() || DEFAULT_COLOR_LABELS[color];
+            input.value = val;
+            if (state.colorLabels[color] !== val) {
+              const next = cloneState(state);
+              next.colorLabels[color] = val;
+              commitState(next);
+            }
+          });
+          item.append(dot, input);
+          settingColorLabelsWrap.appendChild(item);
+        });
+      }
+
+      settingFontBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const next = cloneState(state);
+          next.settings.fontFamily = btn.dataset.font;
+          commitState(next);
+          renderSettingsModalUI();
+        });
+      });
+
+      settingSizeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const next = cloneState(state);
+          next.settings.fontSize = btn.dataset.size;
+          commitState(next);
+          renderSettingsModalUI();
+        });
+      });
+
+      settingThemeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const next = cloneState(state);
+          next.settings.bgTheme = btn.dataset.theme;
+          commitState(next);
+          renderSettingsModalUI();
+        });
+      });
+
+      els.btnSettings.addEventListener('click', () => openSettingsModal(false));
+      els.legendBar.addEventListener('click', () => openSettingsModal(true));
+      els.legendBar.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          openSettingsModal(true);
+        }
+      });
+
+      /* --- リセット確認モーダル --- */
+      els.btnReset.addEventListener('click', () => openModal('modal-reset'));
+
+      document.getElementById('btn-reset-cards-only').addEventListener('click', () => {
+        const next = cloneState(state);
+        next.cards = [];
+        commitState(next);
+        closeModal('modal-reset');
+        showToast('カードをすべて消去しました');
+      });
+
+      document.getElementById('btn-reset-full').addEventListener('click', () => {
+        const fresh = createDefaultBoardState(state.settings, state.colorLabels);
+        commitState(fresh);
+        closeModal('modal-reset');
+        showToast('初期テンプレートに戻しました');
+      });
+
+      /* ========================================================================
+         8. ツールバー・フォーム・ショートカット
+         ======================================================================== */
+      // ボードタイトル編集
+      els.titleInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          els.titleInput.blur();
+        } else if (e.key === 'Escape') {
+          els.titleInput.value = state.title;
+          els.titleInput.blur();
+        }
+      });
+      els.titleInput.addEventListener('blur', () => {
+        const val = els.titleInput.value.trim() || '3連休プラン';
+        els.titleInput.value = val;
+        if (val !== state.title) {
+          const next = cloneState(state);
+          next.title = val;
+          commitState(next);
+        }
+      });
+
+      // 行追加
+      els.btnAddRow.addEventListener('click', addRow);
+
+      // 待機エリア開閉（ツールバー＆サイドバー共通）
+      function toggleWaitingArea(scrollIfMobile = false) {
+        poolCollapsed = !poolCollapsed;
+        els.poolSection.classList.toggle('collapsed', poolCollapsed);
+        els.btnToolbarPool.classList.toggle('is-active', !poolCollapsed);
+        updatePoolToggleIcon();
+        if (scrollIfMobile && !poolCollapsed && window.innerWidth < 900) {
+          els.poolSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+      }
+      els.btnTogglePool.addEventListener('click', () => toggleWaitingArea(false));
+      els.btnToolbarPool.addEventListener('click', () => toggleWaitingArea(true));
+
+      // 待機エリアのクイック追加
+      els.quickAddForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const text = els.quickAddInput.value.trim();
+        if (!text) return;
+        const next = cloneState(state);
+        next.cards.push({
+          id: uid('card'),
+          text,
+          color: quickAddColor,
+          colId: null,
+          rowId: null
+        });
+        els.quickAddInput.value = '';
+        commitState(next);
+      });
+
+      // スクショ表示モード
+      function setScreenshotMode(enabled) {
+        document.body.classList.toggle('screenshot-mode', enabled);
+        if (enabled) {
+          showToast('スクショ表示にしました（右下のボタンまたはEscで解除）');
+        }
+      }
+      els.btnScreenshot.addEventListener('click', () => setScreenshotMode(true));
+      els.btnExitScreenshot.addEventListener('click', () => setScreenshotMode(false));
+
+      // Undo / Redo ボタン
+      els.btnUndo.addEventListener('click', undo);
+      els.btnRedo.addEventListener('click', redo);
+
+      // キーボードショートカット
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          if (document.querySelector('.modal-backdrop.open')) {
+            closeAllModals();
+          } else if (document.body.classList.contains('screenshot-mode')) {
+            setScreenshotMode(false);
+          }
+          return;
+        }
+
+        const tag = document.activeElement?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+        const isMod = e.ctrlKey || e.metaKey;
+        if (isMod && !e.shiftKey && e.key.toLowerCase() === 'z') {
+          e.preventDefault();
+          undo();
+        } else if (
+          (isMod && e.key.toLowerCase() === 'y') ||
+          (isMod && e.shiftKey && e.key.toLowerCase() === 'z')
+        ) {
+          e.preventDefault();
+          redo();
+        }
+      });
+
+      window.addEventListener('resize', updatePoolToggleIcon);
+
+      // トースト表示
+      let toastTimer = null;
+      function showToast(message) {
+        els.toast.textContent = message;
+        els.toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => {
+          els.toast.classList.remove('show');
+        }, 2400);
+      }
+
+      /* ========================================================================
+         9. 初期化
+         ======================================================================== */
+      const initialState = loadInitialState();
+      commitState(initialState);
+    })();
+  </script>
+</body>
+</html>
