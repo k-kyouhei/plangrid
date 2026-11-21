@@ -102,9 +102,9 @@ plangrid/
 リポジトリをクローンまたはダウンロードし、`index.html` をブラウザで直接開くだけで動作します（ビルド手順・ローカルサーバー不要）。
 
 ### GitHub Pages で公開する
-1. このリポジトリ（`k-kyouhei/plangrid`）に `index.html` を配置して `main` ブランチへプッシュします。
+1. このリポジトリ（`k-kyouhei/plangrid`）に `index.html` を配置して `master` ブランチへプッシュします。
 2. GitHub のリポジトリページで **Settings** → **Pages** を開きます。
-3. **Build and deployment** の Source で **Deploy from a branch** を選び、Branch に `main` / `/ (root)` を指定して **Save** をクリックします。
+3. **Build and deployment** の Source で **Deploy from a branch** を選び、Branch に `master` / `/ (root)` を指定して **Save** をクリックします。
 4. 数十秒〜数分後、`https://k-kyouhei.github.io/plangrid/` で公開されます。
 
 ---
